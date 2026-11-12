@@ -8,7 +8,7 @@ pasted nodes or build them by hand.
 ```
 When chat message received ──► Input Parser1 ──► … ──► Collect All Sections ──► Assemble HTML Report
           │                                                     │
-          └──► Wake Visualiser                                  └──► Prep Trend Text ──► Extract Trends ──► Map Trends ──► Visualize Trend ──► Write Trend Visuals
+          └──► Wake Visualiser                                  └──► Prep Trend Text ──► Extract Trends ──► Map Trends ──► Visualize Trend ──► Build Trend Gallery
                                                                                             ▲         ▲
                                                                        Google Gemini Chat Model     Structured Output Parser
 ```
@@ -33,9 +33,6 @@ every call is retried twice).
 - The service is live at `https://trend-visualiser.onrender.com`, and opening
   `https://trend-visualiser.onrender.com/health` in a browser returns `{"status":"ok"}`.
 - `SERVICE_API_KEY` is set on Render.
-- The dashboard spreadsheet has a tab named exactly **`Trend Visuals`** with this header row in
-  row 1: `date | trend | prompt | image_1 | image_2`. For readable thumbnails, set row height to
-  about 150 px and columns D and E to about 200 px wide.
 
 ## 2. Credentials
 
@@ -46,7 +43,8 @@ select them on the nodes after pasting.
 | --- | --- | --- | --- |
 | `Trend Visualizer API key` | Header Auth | Name `x-api-key`, Value = your `SERVICE_API_KEY` | Visualize Trend |
 | your Gemini credential | Google Gemini (PaLM) API | your Gemini API key | Google Gemini Chat Model |
-| your Google Sheets credential | Google Sheets OAuth2 API | sign in with the account that owns the dashboard | Write Trend Visuals |
+
+No Google Sheets credential is needed: the branch ends in a Code node that builds an HTML file.
 
 ## 3. Paste the snippet
 
@@ -62,8 +60,6 @@ select them on the nodes after pasting.
    - **Google Gemini Chat Model**: your Gemini credential
    - **Visualize Trend**: Authentication is already `Generic Credential Type` → `Header Auth`;
      select `Trend Visualizer API key`
-   - **Write Trend Visuals**: your Google Sheets credential, then pick the dashboard spreadsheet
-     under **Document**
 5. Save the workflow.
 
 ## 4. Node reference
@@ -186,24 +182,23 @@ Output per trend: `{ "trend", "prompt", "images": [url, url] }`.
 Errors: `401` means the credential's key doesn't match `SERVICE_API_KEY` on Render. `422` means the
 body is invalid (check Map Trends' output). `502` means Fal failed or timed out.
 
-### Write Trend Visuals (Google Sheets)
+### Build Trend Gallery (Code)
+
+Works like **Download Final Report**: it returns the page as binary data you download from the
+node's output.
 
 | Setting | Value |
 | --- | --- |
 | Input | **Visualize Trend** |
-| Operation | `Append Row` |
-| Document | the dashboard spreadsheet (pick it after pasting) |
-| Sheet | `Trend Visuals` |
-| Mapping Column Mode | `Map Each Column Manually` |
-| Options → Cell Format | `Let Google Sheets format` (`USER_ENTERED`, so `=IMAGE()` renders) |
+| Mode | `Run Once for All Items` |
+| Language | JavaScript |
+| Code | contents of [`build_gallery.js`](build_gallery.js) |
 
-| Column | Value (expression mode) |
-| --- | --- |
-| `date` | `{{ $now.toFormat('yyyy-MM-dd') }}` |
-| `trend` | `{{ $json.trend }}` |
-| `prompt` | `{{ $json.prompt }}` |
-| `image_1` | `=IMAGE("{{ $json.images[0] }}")` |
-| `image_2` | `=IMAGE("{{ $json.images[1] }}")` |
+Output: one item with `json` `{ "fileName": "trend_visuals_YYYY-MM-DD.html", "trendCount" }` and
+`binary.data`, a self-contained HTML page (`text/html`) titled **Trend Visuals — YYYY-MM-DD**
+(UTC date). It has one card per trend: the trend name, its images side by side and the prompt in
+small grey text. Trends without images are skipped. The images load from their Fal URLs, so the
+page needs an internet connection to show them.
 
 ## 5. Test it
 
@@ -212,15 +207,15 @@ body is invalid (check Map Trends' output). `502` means Fal failed or timed out.
    **Prep Trend Text**, **Extract Trends** and **Map Trends**, and check that Map Trends outputs
    1-5 sensible items. None of these call Fal.
 3. For the first paid run, set `MAX_TRENDS = 1` in Map Trends so only one trend goes to Fal
-   (about $0.006). Execute **Visualize Trend** and **Write Trend Visuals** and check the
-   `Trend Visuals` tab.
+   (about $0.006). Execute **Visualize Trend** and **Build Trend Gallery**, then download the
+   HTML file from Build Trend Gallery's output (Binary tab) and open it in a browser.
 4. Set `MAX_TRENDS` back to `5` and run the full workflow.
 
 ## 6. Regenerate the snippet
 
 `trend_visuals_branch.json` is generated; don't edit it by hand. After changing
-`prep_trend_text.js`, `map_trends.js`, or the prompt or JSON example in this file, run from the
-repo root:
+`prep_trend_text.js`, `map_trends.js`, `build_gallery.js`, or the prompt or JSON example in this
+file, run from the repo root:
 
 ```powershell
 node --test "n8n/tests/*.test.js"      # Code node tests

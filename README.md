@@ -1,7 +1,7 @@
    # Trend Visualizer
 
    Turns rug trends from an n8n trend agent into photorealistic room images,
-   shown in a Google Sheets Market Intelligence Dashboard.
+   collected in an HTML gallery file that the n8n workflow generates.
 
    Built as an extension to the Wayfair AI Agent Engineering externship (Extern).
 

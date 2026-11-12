@@ -1,8 +1,9 @@
 // Builds n8n/trend_visuals_branch.json: an n8n clipboard snippet ({nodes, connections}) to paste
 // onto the trend workflow canvas with Ctrl+V.
 //
-// Inlines n8n/prep_trend_text.js and n8n/map_trends.js, and takes the Extract Trends prompt and
-// JSON example from the fenced blocks in n8n/SETUP.md, so rerun it after editing any of those.
+// Inlines n8n/prep_trend_text.js, n8n/map_trends.js and n8n/build_gallery.js, and takes the
+// Extract Trends prompt and JSON example from the fenced blocks in n8n/SETUP.md, so rerun it after
+// editing any of those.
 //
 // Usage (from the repo root): node n8n/scripts/build_snippet.js
 const fs = require("fs");
@@ -101,39 +102,12 @@ const nodes = [
     waitBetweenTries: 5000,
   },
   {
-    parameters: {
-      operation: "append",
-      documentId: { __rl: true, value: "", mode: "list" },
-      sheetName: { __rl: true, value: "Trend Visuals", mode: "name" },
-      columns: {
-        mappingMode: "defineBelow",
-        value: {
-          date: "={{ $now.toFormat('yyyy-MM-dd') }}",
-          trend: "={{ $json.trend }}",
-          prompt: "={{ $json.prompt }}",
-          image_1: '==IMAGE("{{ $json.images[0] }}")',
-          image_2: '==IMAGE("{{ $json.images[1] }}")',
-        },
-        matchingColumns: [],
-        schema: ["date", "trend", "prompt", "image_1", "image_2"].map((col) => ({
-          id: col,
-          displayName: col,
-          required: false,
-          defaultMatch: false,
-          display: true,
-          type: "string",
-          canBeUsedToMatch: true,
-        })),
-        attemptToConvertTypes: false,
-        convertFieldsToString: false,
-      },
-      options: { cellFormat: "USER_ENTERED" },
-    },
-    type: "n8n-nodes-base.googleSheets",
-    typeVersion: 4.5,
+    parameters: { jsCode: read("n8n/build_gallery.js") },
+    type: "n8n-nodes-base.code",
+    typeVersion: 2,
     position: [10560, BELOW],
     id: id(),
-    name: "Write Trend Visuals",
+    name: "Build Trend Gallery",
   },
 ];
 
@@ -142,7 +116,7 @@ const connections = {
   "Prep Trend Text": main("Extract Trends"),
   "Extract Trends": main("Map Trends"),
   "Map Trends": main("Visualize Trend"),
-  "Visualize Trend": main("Write Trend Visuals"),
+  "Visualize Trend": main("Build Trend Gallery"),
   "Google Gemini Chat Model": {
     ai_languageModel: [[{ node: "Extract Trends", type: "ai_languageModel", index: 0 }]],
   },

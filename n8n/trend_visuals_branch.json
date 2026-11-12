@@ -13,7 +13,7 @@
         0,
         900
       ],
-      "id": "b110ed6b-03a1-4b8c-a32e-a4160c520470",
+      "id": "8645fd9a-cbbc-4e5b-90e6-402d048b801d",
       "name": "Wake Visualiser",
       "onError": "continueRegularOutput"
     },
@@ -27,7 +27,7 @@
         9536,
         900
       ],
-      "id": "3dc507fd-d213-450e-beac-7d6bde0beff6",
+      "id": "91d1165d-a3a7-4c6c-9518-bf7d2943dcf5",
       "name": "Prep Trend Text"
     },
     {
@@ -42,7 +42,7 @@
         9760,
         900
       ],
-      "id": "1c383155-b2c4-4ac4-b15e-14c7d0c9c1c0",
+      "id": "bc1ab601-3872-43d9-8364-d6bd315c92b4",
       "name": "Extract Trends"
     },
     {
@@ -56,7 +56,7 @@
         9744,
         1120
       ],
-      "id": "7f3613e3-4190-4ff0-8f63-73db9a04c319",
+      "id": "4457ed41-e198-440d-82ad-578ad244d210",
       "name": "Google Gemini Chat Model"
     },
     {
@@ -70,7 +70,7 @@
         9904,
         1120
       ],
-      "id": "2cc7aa7f-a902-4d03-9e17-055d7e715b85",
+      "id": "487a45e6-d56e-459e-af75-1e6d9ca32513",
       "name": "Structured Output Parser"
     },
     {
@@ -83,7 +83,7 @@
         10112,
         900
       ],
-      "id": "ad9c6073-bde0-4187-9dca-3adb6184a3f6",
+      "id": "16a60fbc-1adf-4399-922b-ffff8817b686",
       "name": "Map Trends"
     },
     {
@@ -105,7 +105,7 @@
         10336,
         900
       ],
-      "id": "e00636ca-09e1-4db3-bb6a-116aec1e3ac4",
+      "id": "f3c15d7e-f4aa-4828-bedd-2001b00a1716",
       "name": "Visualize Trend",
       "retryOnFail": true,
       "maxTries": 3,
@@ -113,89 +113,16 @@
     },
     {
       "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "",
-          "mode": "list"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "Trend Visuals",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "date": "={{ $now.toFormat('yyyy-MM-dd') }}",
-            "trend": "={{ $json.trend }}",
-            "prompt": "={{ $json.prompt }}",
-            "image_1": "==IMAGE(\"{{ $json.images[0] }}\")",
-            "image_2": "==IMAGE(\"{{ $json.images[1] }}\")"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "date",
-              "displayName": "date",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "trend",
-              "displayName": "trend",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "prompt",
-              "displayName": "prompt",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "image_1",
-              "displayName": "image_1",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "image_2",
-              "displayName": "image_2",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {
-          "cellFormat": "USER_ENTERED"
-        }
+        "jsCode": "// n8n Code node \"Build Trend Gallery\" (mode: Run Once for All Items).\n//\n// Expects one item per trend from \"Visualize Trend\": { trend, prompt, images: [url, ...] }.\n//\n// Output: ONE item, downloadable like \"Download Final Report\":\n//   json:   { fileName: \"trend_visuals_YYYY-MM-DD.html\" (UTC date), trendCount }\n//   binary: data = a self-contained HTML page (base64, text/html), one card per trend\n// Trends without any http(s) image URL are skipped and not counted.\n\nconst dateStr = new Date().toISOString().split(\"T\")[0];\nconst fileName = `trend_visuals_${dateStr}.html`;\n\nfunction escapeHtml(value) {\n  return String(value ?? \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n}\n\nfunction imageUrls(value) {\n  if (!Array.isArray(value)) return [];\n  return value.filter((url) => typeof url === \"string\" && /^https?:\\/\\//i.test(url.trim())).map((url) => url.trim());\n}\n\nconst trends = $input\n  .all()\n  .map((item) => item.json ?? {})\n  .map((json) => ({ name: json.trend, prompt: json.prompt, images: imageUrls(json.images) }))\n  .filter((trend) => trend.images.length > 0);\n\nconst cards = trends.map((trend) => {\n  const name = escapeHtml(trend.name) || \"Untitled trend\";\n  const images = trend.images\n    .map((url) => `<img src=\"${escapeHtml(url)}\" alt=\"${name}\" style=\"flex:1 1 280px;min-width:0;max-width:100%;border-radius:8px;object-fit:cover;aspect-ratio:4/3;background:#eee\">`)\n    .join(\"\\n        \");\n  return `\n    <section style=\"background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px;margin:0 0 24px\">\n      <h2 style=\"margin:0 0 14px;font-size:20px;font-weight:600\">${name}</h2>\n      <div style=\"display:flex;flex-wrap:wrap;gap:12px\">\n        ${images}\n      </div>\n      <p style=\"margin:12px 0 0;font-size:12px;line-height:1.5;color:#888\">${escapeHtml(trend.prompt)}</p>\n    </section>`;\n});\n\nconst body = cards.length\n  ? cards.join(\"\\n\")\n  : `\\n    <p style=\"color:#888\">No trend visuals were generated in this run.</p>`;\n\nconst html = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Trend Visuals — ${dateStr}</title>\n</head>\n<body style=\"margin:0;background:#f5f5f3;color:#222;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\">\n  <main style=\"max-width:1100px;margin:0 auto;padding:32px 16px\">\n    <h1 style=\"margin:0 0 24px;font-size:28px;font-weight:600\">Trend Visuals — ${dateStr}</h1>${body}\n  </main>\n</body>\n</html>\n`;\n\nreturn [\n  {\n    json: { fileName, trendCount: trends.length },\n    binary: {\n      data: {\n        data: Buffer.from(html, \"utf8\").toString(\"base64\"),\n        mimeType: \"text/html\",\n        fileName,\n      },\n    },\n  },\n];\n"
       },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         10560,
         900
       ],
-      "id": "2f3969b2-790a-4884-bdc8-cb9f487bfea7",
-      "name": "Write Trend Visuals"
+      "id": "699e1382-6318-4294-8d10-5e4b5a496071",
+      "name": "Build Trend Gallery"
     }
   ],
   "connections": {
@@ -236,7 +163,7 @@
       "main": [
         [
           {
-            "node": "Write Trend Visuals",
+            "node": "Build Trend Gallery",
             "type": "main",
             "index": 0
           }

@@ -3,13 +3,15 @@
 ## Project
 Trend Visualizer is a small FastAPI service that turns rug trends from an n8n trend agent into
 photorealistic room images. n8n calls `POST /visualize`. The service builds an image prompt,
-calls Fal.ai and returns image URLs. n8n then writes those URLs into a Google Sheets dashboard
-as `=IMAGE(url)`. It's a side project for the Wayfair AI Agent Engineering externship, shown in
+calls Fal.ai and returns image URLs. n8n then builds a self-contained HTML gallery file
+(`trend_visuals_<date>.html`, one card per trend) that you download from the workflow, like the
+existing HTML trend report. It's a side project for the Wayfair AI Agent Engineering externship, shown in
 a 60–90 second demo clip at the final presentation. Full spec: `docs/PRD.md`.
 
 ## Current phase
 **Phase 2: deploy + n8n integration.** The service runs on Render. Wire it into the n8n trend
-workflow (Prep Trend Text → Extract Trends → Map Trends → `POST /visualize` → Google Sheets).
+workflow (Prep Trend Text → Extract Trends → Map Trends → `POST /visualize` → Build Trend Gallery).
+No Google Sheets: the n8n instance has no Google credential.
 Node setup: `n8n/SETUP.md`.
 
 - [x] Phase 0: setup + spike
@@ -40,7 +42,8 @@ python spike\spike.py                        # Phase 0 spike: CALLS FAL, COSTS M
 - `app/generator.py` (in progress, Phase 1): Fal.ai call, returns image URLs
 - `spike/`: Phase 0 experiments (`spike/output/` is gitignored)
 - `tests/`: pytest tests, Fal calls always mocked
-- `n8n/`: Code node scripts (`prep_trend_text.js`, `map_trends.js`), their tests in `n8n/tests/`,
+- `n8n/`: Code node scripts (`prep_trend_text.js`, `map_trends.js`, `build_gallery.js`), their
+  tests in `n8n/tests/`,
   node setup in `SETUP.md`, and `sample_trend_output.json` (real agent output, base64 removed)
   - `trend_visuals_branch.json`: paste-ready n8n snippet of the whole branch. Generated, never
     edit by hand: rerun `node n8n/scripts/build_snippet.js` after changing the Code node scripts
