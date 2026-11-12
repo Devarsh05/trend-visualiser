@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from app.generator import GenerationError, generate_images
 from app.prompts import Trend, build_prompt
 
-load_dotenv()  # local dev only; never overrides env vars already set (Docker, Railway)
+load_dotenv()  # local dev only; never overrides env vars already set (Docker, Render)
 
 app = FastAPI(title="Trend Visualizer")
 

@@ -41,7 +41,7 @@ The MVP is five features, about 15–25 hours and 200–300 lines of Python.
 | --- | --- | --- |
 | Prompt builder: trend data to a consistent image prompt | Must | 2–3 hrs |
 | FastAPI service with `/visualize` and `/health`, API key auth | Must | 4–6 hrs |
-| Docker image, deployed on Railway | Must | 1–2 hrs |
+| Docker image, deployed on Render (free tier) | Must | 1–2 hrs |
 | n8n HTTP Request node + "Trend Visuals" tab in the Sheet | Must | 3–5 hrs |
 | Demo clip and 2–3 final deck slides | Must | 3–4 hrs |
 | README and basic pytest tests (Fal call mocked) | Should | 2 hrs |
@@ -56,7 +56,7 @@ n8n orchestrates; a small containerized Python service does the image work.
 ```mermaid
 flowchart LR
     A[n8n trend agent] --> B[HTTP Request node]
-    B -->|POST /visualize<br/>x-api-key| C[FastAPI service<br/>on Railway]
+    B -->|POST /visualize<br/>x-api-key| C[FastAPI service<br/>on Render]
     C --> D[Prompt builder]
     D --> E[Fal.ai image model]
     E -->|image URLs| C
@@ -64,7 +64,9 @@ flowchart LR
     B --> F[Google Sheet<br/>Trend Visuals tab]
 ```
 
-The Sheet renders thumbnails with `=IMAGE(url)`. Secrets (`FAL_KEY`, `SERVICE_API_KEY`) live in Railway environment variables and an n8n credential, never in code or the workflow JSON.
+The Sheet renders thumbnails with `=IMAGE(url)`. Secrets (`FAL_KEY`, `SERVICE_API_KEY`) live in Render environment variables and an n8n credential, never in code or the workflow JSON.
+
+The service runs as a Docker web service on Render's free tier, which spins down after 15 minutes idle; the first request after that takes about a minute while it cold-starts.
 
 **Repo layout:** `app/main.py` (endpoints), `app/prompts.py` (prompt builder), `app/generator.py` (Fal call), plus `Dockerfile`, `requirements.txt`, `.env.example` and `README.md`.
 
@@ -137,12 +139,13 @@ The biggest risk is the extension eating time the required projects need.
 | Agent output is too messy to map into fields | Add a cleanup step in n8n (Set or Code node) before the HTTP call |
 | Live demo fails on Zoom | Present a pre-recorded clip, not a live call |
 | API costs or leaked keys | API key auth on the service, `num_images` cap, secrets only in env vars |
-| n8n can't reach the service | Deploy early on Railway and test the call from n8n in week 3 |
+| n8n can't reach the service | Deploy early on Render and test the call from n8n in week 3 |
+| Render free-tier cold start (~1 min after 15 min idle) breaks the 30-second target | n8n pings `GET /health` at the start of the run so the service is warm; 120-second timeout on the `/visualize` call |
 
 ## Open questions
 
 - [ ] Which Fal.ai model gives the best quality-to-cost for rooms? Decide during the spike.
 - [ ] What fields does the Project 2 trend agent actually output? Shapes the request body.
-- [ ] Is n8n self-hosted or cloud for this externship? Affects how it reaches Railway.
+- [ ] Is n8n self-hosted or cloud for this externship? Affects how it reaches Render.
 - [ ] Does Extern allow extra work in the final deck, and how many minutes per presenter?
 - [ ] What team is Gautham on? Shapes how the extension is framed.

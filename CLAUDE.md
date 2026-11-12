@@ -8,18 +8,20 @@ as `=IMAGE(url)`. It's a side project for the Wayfair AI Agent Engineering exter
 a 60–90 second demo clip at the final presentation. Full spec: `docs/PRD.md`.
 
 ## Current phase
-**Phase 1: service build.** Build the prompt builder, the Fal generator (`fal-ai/flux/schnell`,
-picked in Phase 0), `/health` and `/visualize`, tests and the Dockerfile.
+**Phase 2: deploy + n8n integration.** The service runs on Render. Wire it into the n8n trend
+workflow (Prep Trend Text → Extract Trends → Map Trends → `POST /visualize` → Google Sheets).
+Node setup: `n8n/SETUP.md`.
 
 - [x] Phase 0: setup + spike
 - [ ] Phase 1: service build
-- [ ] Phase 2: deploy (Railway) + n8n integration
+- [ ] Phase 2: deploy (Render) + n8n integration
 - [ ] Phase 3: polish
 - [ ] Phase 4: freeze + demo
 
 ## Stack
-Python 3.11+, FastAPI, Pydantic, fal-client, python-dotenv, pytest. Docker, deployed on Railway.
-n8n for orchestration.
+Python 3.11+, FastAPI, Pydantic, fal-client, python-dotenv, pytest. Docker, deployed on Render
+(free tier: spins down after 15 min idle, ~1 min cold start). n8n for orchestration; its Code
+node scripts are plain JavaScript tested with Node's built-in runner (no npm packages).
 
 ## Commands (Windows, PowerShell, venv in `.venv`)
 ```powershell
@@ -27,6 +29,7 @@ n8n for orchestration.
 pip install -r requirements.txt              # install deps
 uvicorn app.main:app --reload                # dev server → http://127.0.0.1:8000
 pytest                                       # run tests (Fal always mocked)
+node --test "n8n/tests/*.test.js"            # test the n8n Code node scripts
 python spike\spike.py                        # Phase 0 spike: CALLS FAL, COSTS MONEY, ask first
 ```
 
@@ -36,6 +39,8 @@ python spike\spike.py                        # Phase 0 spike: CALLS FAL, COSTS M
 - `app/generator.py` (in progress, Phase 1): Fal.ai call, returns image URLs
 - `spike/`: Phase 0 experiments (`spike/output/` is gitignored)
 - `tests/`: pytest tests, Fal calls always mocked
+- `n8n/`: Code node scripts (`prep_trend_text.js`, `map_trends.js`), their tests in `n8n/tests/`,
+  node setup in `SETUP.md`, and `sample_trend_output.json` (real agent output, base64 removed)
 - `docs/PRD.md`: product spec
 
 ## API contract

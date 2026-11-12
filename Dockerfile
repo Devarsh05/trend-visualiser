@@ -13,5 +13,5 @@ COPY app/ ./app/
 
 EXPOSE 8000
 
-# Shell form so ${PORT} (set by Railway) expands; exec makes uvicorn PID 1 so it gets SIGTERM
+# Shell form so ${PORT} (set by Render) expands; exec makes uvicorn PID 1 so it gets SIGTERM
 CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
