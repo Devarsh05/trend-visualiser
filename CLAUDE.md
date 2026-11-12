@@ -8,10 +8,10 @@ as `=IMAGE(url)`. It's a side project for the Wayfair AI Agent Engineering exter
 a 60–90 second demo clip at the final presentation. Full spec: `docs/PRD.md`.
 
 ## Current phase
-**Phase 0: setup + spike.** Check that a prompt template reliably produces good room images,
-and pick a Fal model.
+**Phase 1: service build.** Build the prompt builder, the Fal generator (`fal-ai/flux/schnell`,
+picked in Phase 0), `/health` and `/visualize`, tests and the Dockerfile.
 
-- [ ] Phase 0: setup + spike
+- [x] Phase 0: setup + spike
 - [ ] Phase 1: service build
 - [ ] Phase 2: deploy (Railway) + n8n integration
 - [ ] Phase 3: polish
@@ -31,9 +31,9 @@ python spike\spike.py                        # Phase 0 spike: CALLS FAL, COSTS M
 ```
 
 ## Repo layout
-- `app/main.py` (planned, Phase 1): FastAPI app, `/health` and `/visualize` endpoints
-- `app/prompts.py` (planned, Phase 1): `build_prompt(trend)` → image prompt string
-- `app/generator.py` (planned, Phase 1): Fal.ai call, returns image URLs
+- `app/main.py` (in progress, Phase 1): FastAPI app, `/health` and `/visualize` endpoints
+- `app/prompts.py` (in progress, Phase 1): `build_prompt(trend)` → image prompt string
+- `app/generator.py` (in progress, Phase 1): Fal.ai call, returns image URLs
 - `spike/`: Phase 0 experiments (`spike/output/` is gitignored)
 - `tests/`: pytest tests, Fal calls always mocked
 - `docs/PRD.md`: product spec
