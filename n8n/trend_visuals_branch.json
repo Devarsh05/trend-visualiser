@@ -1,0 +1,269 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://trend-visualiser.onrender.com/health",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        900
+      ],
+      "id": "b110ed6b-03a1-4b8c-a32e-a4160c520470",
+      "name": "Wake Visualiser",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node \"Prep Trend Text\" (mode: Run Once for All Items).\n//\n// Expects the same input as \"Assemble HTML Report\": one item whose json has\n//   sections: { executive, category, visual, recommendations, ... }  LLM-written HTML strings\n//   metadata: { category: \"Area Rug\", ... }\n// Turns the trend-relevant sections into plain text for the Extract Trends LLM.\n// Reads only sections and metadata; imageStore (~2 MB of base64) is never read or copied.\n//\n// Output: [{ json: { category, reportText } }]\n\nconst SECTION_ORDER = [\"executive\", \"category\", \"visual\", \"recommendations\"];\nconst MAX_CHARS = 8000;\n\nconst NAMED_ENTITIES = { amp: \"&\", lt: \"<\", gt: \">\", quot: '\"', apos: \"'\", nbsp: \" \" };\n\nfunction decodeEntities(text) {\n  return text.replace(/&(#x[0-9a-f]+|#\\d+|[a-z]+);/gi, (match, code) => {\n    if (code[0] === \"#\") {\n      const n = code[1].toLowerCase() === \"x\" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);\n      return Number.isFinite(n) && n <= 0x10ffff ? String.fromCodePoint(n) : match;\n    }\n    return NAMED_ENTITIES[code.toLowerCase()] ?? match;\n  });\n}\n\nfunction htmlToText(html) {\n  const text = html\n    .replace(/```(?:html)?/gi, \" \")\n    .replace(/<!--[\\s\\S]*?-->/g, \" \")\n    .replace(/<[^>]*>/g, \" \");\n  return decodeEntities(text)\n    .replace(/­/g, \"\") // soft hyphen\n    .replace(/‑/g, \"-\") // non-breaking hyphen\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction truncate(text, max) {\n  if (text.length <= max) return text;\n  const cut = text.slice(0, max);\n  const lastSpace = cut.lastIndexOf(\" \");\n  return (lastSpace > max * 0.8 ? cut.slice(0, lastSpace) : cut).trim();\n}\n\nconst first = $input.all()[0]?.json ?? {};\nconst sections = first.sections ?? {};\n\nconst parts = SECTION_ORDER\n  .map((key) => sections[key])\n  .filter((html) => typeof html === \"string\" && html.trim())\n  .map(htmlToText)\n  .filter(Boolean);\n\nreturn [{\n  json: {\n    category: first.metadata?.category || \"Area Rug\",\n    reportText: truncate(parts.join(\"\\n\\n\"), MAX_CHARS),\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9536,
+        900
+      ],
+      "id": "3dc507fd-d213-450e-beac-7d6bde0beff6",
+      "name": "Prep Trend Text"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You turn a market trend report into short visual briefs for an image generator that renders\nphotorealistic rooms with a rug as the focal point.\n\nCategory: {{ $json.category }}\n\nReport:\n{{ $json.reportText }}\n\nExtract up to 5 distinct visual rug trends from the report, most important first. Prefer the\nnamed micro-segments. For each trend return:\n- name: short trend name in sentence case, ending in \"rugs\" or \"runners\"\n  (e.g. \"Organic modern neutral rugs\").\n- materials: 1-3 rug materials named in the report (e.g. \"wool\", \"polyester\").\n- colors: 2-4 plain color names from the report (e.g. \"warm beige\", \"terracotta\"). No hex codes.\n- style: the room the rug would sit in, as interior style + room type\n  (e.g. \"calm Scandinavian living room\").\n- look: one phrase of at most 200 characters, starting with \"a\" or \"an\", describing what the rug\n  itself looks like: shape, pile height, texture, pattern, edges\n  (e.g. \"a round, irregular shape with subtle high-low carving in tone-on-tone neutrals\").\n\nOnly describe what the report supports. No brands, prices, sizes, percentages or marketing claims.",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        9760,
+        900
+      ],
+      "id": "1c383155-b2c4-4ac4-b15e-14c7d0c9c1c0",
+      "name": "Extract Trends"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        9744,
+        1120
+      ],
+      "id": "7f3613e3-4190-4ff0-8f63-73db9a04c319",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"trends\": [\n    {\n      \"name\": \"Organic modern neutral rugs\",\n      \"materials\": [\"wool\", \"polyester\"],\n      \"colors\": [\"warm beige\", \"cream\", \"soft sand\"],\n      \"style\": \"calm minimalist living room\",\n      \"look\": \"a round, irregular shape with subtle high-low carving in tone-on-tone neutrals\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        9904,
+        1120
+      ],
+      "id": "2cc7aa7f-a902-4d03-9e17-055d7e715b85",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node \"Map Trends\" (mode: Run Once for All Items).\n//\n// Expects the Structured Output Parser result from \"Extract Trends\", either\n//   { output: { trends: [...] } }  (Basic LLM Chain default)  or  { trends: [...] }\n// where each trend has: name, materials, colors, style, look.\n// materials and colors may be arrays or comma-separated strings; any field may be missing.\n//\n// Output: one item per trend, ready to POST to /visualize:\n//   { name, materials: string[], colors: string[], style, look, num_images: 2 }\n// Trends without a name are skipped, and at most MAX_TRENDS are sent to cap Fal cost.\n\nconst MAX_TRENDS = 5;\nconst MAX_LOOK_CHARS = 300; // matches the service's Trend.look max_length\n\nfunction text(value) {\n  return typeof value === \"string\" ? value.trim() : \"\";\n}\n\nfunction list(value) {\n  const raw = Array.isArray(value) ? value : typeof value === \"string\" ? value.split(\",\") : [];\n  return raw.map(text).filter(Boolean);\n}\n\nfunction capChars(value, max) {\n  // Array.from counts code points, so an emoji is never split in half\n  return Array.from(value).slice(0, max).join(\"\").trim();\n}\n\nconst trends = $input.all().flatMap((item) => {\n  const json = item.json ?? {};\n  const found = json.output?.trends ?? json.trends;\n  return Array.isArray(found) ? found : [];\n});\n\nreturn trends\n  .filter((trend) => trend && text(trend.name))\n  .slice(0, MAX_TRENDS)\n  .map((trend) => ({\n    json: {\n      name: text(trend.name),\n      materials: list(trend.materials),\n      colors: list(trend.colors),\n      style: text(trend.style),\n      look: capChars(text(trend.look), MAX_LOOK_CHARS),\n      num_images: 2,\n    },\n  }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10112,
+        900
+      ],
+      "id": "ad9c6073-bde0-4187-9dca-3adb6184a3f6",
+      "name": "Map Trends"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://trend-visualiser.onrender.com/visualize",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        10336,
+        900
+      ],
+      "id": "e00636ca-09e1-4db3-bb6a-116aec1e3ac4",
+      "name": "Visualize Trend",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Trend Visuals",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "trend": "={{ $json.trend }}",
+            "prompt": "={{ $json.prompt }}",
+            "image_1": "==IMAGE(\"{{ $json.images[0] }}\")",
+            "image_2": "==IMAGE(\"{{ $json.images[1] }}\")"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trend",
+              "displayName": "trend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prompt",
+              "displayName": "prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "image_1",
+              "displayName": "image_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "image_2",
+              "displayName": "image_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        10560,
+        900
+      ],
+      "id": "2f3969b2-790a-4884-bdc8-cb9f487bfea7",
+      "name": "Write Trend Visuals"
+    }
+  ],
+  "connections": {
+    "Prep Trend Text": {
+      "main": [
+        [
+          {
+            "node": "Extract Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Trends": {
+      "main": [
+        [
+          {
+            "node": "Map Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Trends": {
+      "main": [
+        [
+          {
+            "node": "Visualize Trend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visualize Trend": {
+      "main": [
+        [
+          {
+            "node": "Write Trend Visuals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Trends",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract Trends",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

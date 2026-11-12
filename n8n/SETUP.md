@@ -1,61 +1,93 @@
 # n8n setup: Trend Visuals
 
-How to add the Trend Visualizer to the existing n8n trend workflow. Every step is done by hand
-in the n8n UI. The code for the two Code nodes lives in this folder; paste it in as-is.
+How to add the Trend Visualizer branch to the existing n8n trend workflow (n8n 2.40.7). The
+quickest route is to paste [`trend_visuals_branch.json`](trend_visuals_branch.json) onto the
+canvas (section 3). Section 4 lists every setting the snippet contains, so you can check the
+pasted nodes or build them by hand.
 
 ```
-Trigger ──► (existing trend agent nodes) ──► Assemble HTML Report
-   │                                    └──► Prep Trend Text ──► Extract Trends ──► Map Trends ──► Visualize Trend ──► Append to Sheet
-   └──► Wake Up Service
+When chat message received ──► Input Parser1 ──► … ──► Collect All Sections ──► Assemble HTML Report
+          │                                                     │
+          └──► Wake Visualiser                                  └──► Prep Trend Text ──► Extract Trends ──► Map Trends ──► Visualize Trend ──► Write Trend Visuals
+                                                                                            ▲         ▲
+                                                                       Google Gemini Chat Model     Structured Output Parser
 ```
 
 **Cost:** each run sends at most 5 trends × 2 images to Fal, about $0.03 (about $0.09 worst case if
-every call is retried). The Fal key stays on Render, so n8n only ever holds the service key.
+every call is retried twice).
 
-## Before you start
+## Secrets
 
-- The service is live on Render, e.g. `https://trend-visualiser.onrender.com`. Replace this with
-  your URL below. `GET /health` returns `{"status":"ok"}` in a browser.
-- You have the `SERVICE_API_KEY` value set on Render.
+- The Fal key (`FAL_KEY`) lives only in Render's environment variables. n8n never sees it.
+- The service key (`SERVICE_API_KEY`) lives only in the **Trend Visualizer API key** Header Auth
+  credential. Don't type it into a node's Headers or URL.
+- **The Cloudflare node ("Generate Image(cloudfare)") must use a Header Auth credential, never a
+  typed header.** Create a Header Auth credential with Name `Authorization` and Value
+  `Bearer <your Cloudflare token>`, select it under Authentication, and delete the `Authorization`
+  row from the node's Headers. A typed header is saved in plain text in every workflow export.
+  If the token was ever typed into the node, revoke it in Cloudflare and issue a new one.
+- `n8n/trend_workflow_original.json` (a full workflow export) is gitignored. Keep it that way.
+
+## 1. Before you start
+
+- The service is live at `https://trend-visualiser.onrender.com`, and opening
+  `https://trend-visualiser.onrender.com/health` in a browser returns `{"status":"ok"}`.
+- `SERVICE_API_KEY` is set on Render.
 - The dashboard spreadsheet has a tab named exactly **`Trend Visuals`** with this header row in
   row 1: `date | trend | prompt | image_1 | image_2`. For readable thumbnails, set row height to
   about 150 px and columns D and E to about 200 px wide.
 
-## 1. Credential: Trend Visualizer API key
+## 2. Credentials
 
-**Credentials → Add credential → Header Auth**
+Create these under **Credentials → Add credential**. The snippet contains no credentials, so you
+select them on the nodes after pasting.
 
-| Field | Value |
-| --- | --- |
-| Credential name | `Trend Visualizer API key` |
-| Name | `x-api-key` |
-| Value | your `SERVICE_API_KEY` |
+| Credential | Type | Settings | Used by |
+| --- | --- | --- | --- |
+| `Trend Visualizer API key` | Header Auth | Name `x-api-key`, Value = your `SERVICE_API_KEY` | Visualize Trend |
+| your Gemini credential | Google Gemini (PaLM) API | your Gemini API key | Google Gemini Chat Model |
+| your Google Sheets credential | Google Sheets OAuth2 API | sign in with the account that owns the dashboard | Write Trend Visuals |
 
-The key lives only in this credential. It never appears in the workflow JSON or a node field.
+## 3. Paste the snippet
 
-## 2. Wake Up Service (HTTP Request)
+1. Open [`trend_visuals_branch.json`](trend_visuals_branch.json), select everything and copy it.
+2. Open the trend workflow, click an empty spot on the canvas and press **Ctrl+V**. The 8 nodes
+   land below the existing ones, already connected to each other. If n8n moves the group, drag
+   **Wake Visualiser** under the trigger and the rest under **Collect All Sections**.
+3. Add the two connections the snippet can't make, because they start from existing nodes. Both
+   are extra outputs; leave the existing connections as they are.
+   - **When chat message received** → **Wake Visualiser**
+   - **Collect All Sections** → **Prep Trend Text**
+4. Select credentials:
+   - **Google Gemini Chat Model**: your Gemini credential
+   - **Visualize Trend**: Authentication is already `Generic Credential Type` → `Header Auth`;
+     select `Trend Visualizer API key`
+   - **Write Trend Visuals**: your Google Sheets credential, then pick the dashboard spreadsheet
+     under **Document**
+5. Save the workflow.
+
+## 4. Node reference
+
+### Wake Visualiser (HTTP Request)
 
 Render's free tier spins the service down after 15 minutes idle, and waking it takes about a
 minute. This node pings it at the start of the run, so it is warm by the time the trend agent
-finishes.
-
-Connect it to the **Trigger** as a second, parallel output. Connect nothing after it.
+finishes. Nothing is connected after it.
 
 | Setting | Value |
 | --- | --- |
+| Input | **When chat message received** (extra output) |
 | Method | `GET` |
 | URL | `https://trend-visualiser.onrender.com/health` |
 | Authentication | None |
 | Options → Timeout | `120000` |
-| Settings → On Error | `Continue` |
+| Settings → On Error | `Continue` (`continueRegularOutput`) |
 
-## 3. Prep Trend Text (Code)
-
-Connect it from the **same node that feeds "Assemble HTML Report"**, as a second output. Assemble
-HTML Report keeps its connection unchanged.
+### Prep Trend Text (Code)
 
 | Setting | Value |
 | --- | --- |
+| Input | **Collect All Sections** (extra output; Assemble HTML Report keeps its connection) |
 | Mode | `Run Once for All Items` |
 | Language | JavaScript |
 | Code | contents of [`prep_trend_text.js`](prep_trend_text.js) |
@@ -63,16 +95,15 @@ HTML Report keeps its connection unchanged.
 Output: one item `{ category, reportText }`. It reads only `sections` and `metadata` and never
 copies `imageStore`.
 
-## 4. Extract Trends (Basic LLM Chain)
-
-Connect it after **Prep Trend Text**.
+### Extract Trends (Basic LLM Chain)
 
 | Setting | Value |
 | --- | --- |
+| Input | **Prep Trend Text** |
 | Source for Prompt | `Define below` |
 | Require Specific Output Format | on |
-| Chat Model (sub-node) | the same model the trend agent uses |
-| Output Parser (sub-node) | **Structured Output Parser** (below) |
+| Chat Model (sub-node) | **Google Gemini Chat Model**, model `models/gemini-2.5-flash` |
+| Output Parser (sub-node) | **Structured Output Parser** |
 
 **Prompt (Text field, expression mode):**
 
@@ -100,12 +131,9 @@ named micro-segments. For each trend return:
 Only describe what the report supports. No brands, prices, sizes, percentages or marketing claims.
 ```
 
-**Structured Output Parser:**
+**Structured Output Parser:** Schema Type `Generate From JSON Example`.
 
-| Setting | Value |
-| --- | --- |
-| Schema Type | `Generate From JSON Example` |
-| JSON Example | below |
+**Structured Output Parser JSON example:**
 
 ```json
 {
@@ -123,24 +151,24 @@ Only describe what the report supports. No brands, prices, sizes, percentages or
 
 The chain outputs `{ "output": { "trends": [...] } }`.
 
-## 5. Map Trends (Code)
-
-Connect it after **Extract Trends**.
+### Map Trends (Code)
 
 | Setting | Value |
 | --- | --- |
+| Input | **Extract Trends** |
 | Mode | `Run Once for All Items` |
 | Language | JavaScript |
 | Code | contents of [`map_trends.js`](map_trends.js) |
 
 Output: one item per trend (at most 5) shaped like the `/visualize` request body.
 
-## 6. Visualize Trend (HTTP Request)
+### Visualize Trend (HTTP Request)
 
-Connect it after **Map Trends**. It runs once per trend item.
+Runs once per trend item.
 
 | Setting | Value |
 | --- | --- |
+| Input | **Map Trends** |
 | Method | `POST` |
 | URL | `https://trend-visualiser.onrender.com/visualize` |
 | Authentication | `Generic Credential Type` → `Header Auth` → `Trend Visualizer API key` |
@@ -158,14 +186,13 @@ Output per trend: `{ "trend", "prompt", "images": [url, url] }`.
 Errors: `401` means the credential's key doesn't match `SERVICE_API_KEY` on Render. `422` means the
 body is invalid (check Map Trends' output). `502` means Fal failed or timed out.
 
-## 7. Append to Sheet (Google Sheets)
-
-Connect it after **Visualize Trend**.
+### Write Trend Visuals (Google Sheets)
 
 | Setting | Value |
 | --- | --- |
+| Input | **Visualize Trend** |
 | Operation | `Append Row` |
-| Document | the dashboard spreadsheet |
+| Document | the dashboard spreadsheet (pick it after pasting) |
 | Sheet | `Trend Visuals` |
 | Mapping Column Mode | `Map Each Column Manually` |
 | Options → Cell Format | `Let Google Sheets format` (`USER_ENTERED`, so `=IMAGE()` renders) |
@@ -178,13 +205,33 @@ Connect it after **Visualize Trend**.
 | `image_1` | `=IMAGE("{{ $json.images[0] }}")` |
 | `image_2` | `=IMAGE("{{ $json.images[1] }}")` |
 
-## Test it
+## 5. Test it
 
-1. Run **Wake Up Service** alone and confirm `{"status":"ok"}`.
-2. Pin the sample data on the node that feeds Assemble HTML Report (or run the workflow up to it).
-   Then execute **Prep Trend Text**, **Extract Trends** and **Map Trends**, and check that Map
-   Trends outputs 1-5 sensible items. None of these call Fal.
+1. Execute **Wake Visualiser** alone and confirm `{"status":"ok"}`.
+2. Pin the sample data on **Collect All Sections** (or run the workflow up to it). Then execute
+   **Prep Trend Text**, **Extract Trends** and **Map Trends**, and check that Map Trends outputs
+   1-5 sensible items. None of these call Fal.
 3. For the first paid run, set `MAX_TRENDS = 1` in Map Trends so only one trend goes to Fal
-   (about $0.006). Execute **Visualize Trend** and **Append to Sheet** and check the
+   (about $0.006). Execute **Visualize Trend** and **Write Trend Visuals** and check the
    `Trend Visuals` tab.
 4. Set `MAX_TRENDS` back to `5` and run the full workflow.
+
+## 6. Regenerate the snippet
+
+`trend_visuals_branch.json` is generated; don't edit it by hand. After changing
+`prep_trend_text.js`, `map_trends.js`, or the prompt or JSON example in this file, run from the
+repo root:
+
+```powershell
+node --test "n8n/tests/*.test.js"      # Code node tests
+node n8n/scripts/build_snippet.js      # rewrites n8n/trend_visuals_branch.json
+```
+
+The script takes the prompt and JSON example from the code blocks under
+**Prompt (Text field, expression mode)** and **Structured Output Parser JSON example** above, so
+keep those two labels as they are. It refuses to write the file if the snippet has duplicate node
+names, a connection to an unknown node, a `credentials` entry, a `<PLACEHOLDER>` or anything that
+looks like a key.
+
+To update a workflow that already has the branch, delete the 8 pasted nodes before pasting again.
+Otherwise n8n renames the new copies (`Prep Trend Text1`, …).

@@ -30,6 +30,7 @@ pip install -r requirements.txt              # install deps
 uvicorn app.main:app --reload                # dev server → http://127.0.0.1:8000
 pytest                                       # run tests (Fal always mocked)
 node --test "n8n/tests/*.test.js"            # test the n8n Code node scripts
+node n8n/scripts/build_snippet.js            # regenerate n8n/trend_visuals_branch.json
 python spike\spike.py                        # Phase 0 spike: CALLS FAL, COSTS MONEY, ask first
 ```
 
@@ -41,6 +42,12 @@ python spike\spike.py                        # Phase 0 spike: CALLS FAL, COSTS M
 - `tests/`: pytest tests, Fal calls always mocked
 - `n8n/`: Code node scripts (`prep_trend_text.js`, `map_trends.js`), their tests in `n8n/tests/`,
   node setup in `SETUP.md`, and `sample_trend_output.json` (real agent output, base64 removed)
+  - `trend_visuals_branch.json`: paste-ready n8n snippet of the whole branch. Generated, never
+    edit by hand: rerun `node n8n/scripts/build_snippet.js` after changing the Code node scripts
+    or the prompt/JSON example in `SETUP.md`
+  - `scripts/build_snippet.js`: builds and validates that snippet (no credentials, keys or
+    placeholders)
+  - `trend_workflow_original.json`: full workflow export, gitignored, reference only
 - `docs/PRD.md`: product spec
 
 ## API contract
