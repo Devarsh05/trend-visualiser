@@ -3,6 +3,7 @@
 Usage:
     python spike/spike.py --model schnell --dry-run
     python spike/spike.py --model schnell
+    python spike/spike.py --model schnell --trend vintage-wash-jute
     python spike/spike.py --model pro --num-images 2 --seed 42
 """
 
@@ -32,37 +33,49 @@ TRENDS = [
         "materials": "jute",
         "colors": "warm neutrals, faded terracotta",
         "style": "boho living room",
+        "look": "a faded, sun-bleached, washed-out look: muted, low-contrast, dusty colors "
+                "with a soft worn patina, as if aged by years of sunlight, nothing bright or saturated",
     },
     {
         "name": "Moroccan-inspired shag",
         "materials": "wool",
         "colors": "cream, charcoal diamond pattern",
         "style": "modern bedroom",
+        "look": "a deep, plush, fluffy high pile with a slightly irregular hand-knotted "
+                "charcoal diamond trellis of thin lines on a soft cream ground",
     },
     {
         "name": "Washable performance rugs",
         "materials": "polyester",
         "colors": "soft sage, oatmeal",
-        "style": "family living room with kids' toys",
+        "style": "family living room with a few kids' toys",
+        "look": "a low-pile, flat-woven, tightly woven durable texture, not plush or shaggy, "
+                "with a subtle soft sage and oatmeal geometric pattern clearly visible across the surface",
     },
     {
         "name": "Bold abstract rugs",
         "materials": "wool blend",
         "colors": "mustard, cobalt, blush",
         "style": "eclectic apartment living room",
+        "look": "large expressive color-block shapes and organic curves, high contrast "
+                "and vivid saturated color, like a piece of modern art",
     },
     {
         "name": "Natural sisal runners",
         "materials": "sisal",
         "colors": "sand, natural fiber",
         "style": "Scandinavian entryway",
+        "look": "a tight, flat, visible woven fiber texture with natural variation in the grain, "
+                "minimal and undyed, with a simple bound edge",
     },
 ]
 
 STYLE_SUFFIX = (
-    "Editorial interior photography, natural daylight, wide-angle lens, "
-    "the rug clearly visible as the focal point on the floor, "
-    "realistic textures, no text, no watermarks."
+    "Editorial interior photography, natural daylight, "
+    "shot from a slightly elevated eye level, looking across the room, "
+    "the rug prominent in the lower half of the frame with the furniture, walls and "
+    "windows of the room clearly visible, not a close-up product shot, "
+    "realistic textures, no people, no text, no watermarks."
 )
 
 IMAGE_SIZE = "landscape_4_3"  # 1024x768, billed as 1 megapixel
@@ -82,6 +95,7 @@ def build_prompt(trend):
     return (
         f"Photorealistic {trend['style']} featuring a {rug_phrase(trend['name'])} "
         f"made of {trend['materials']} in {trend['colors']}, laid on the floor. "
+        f"The rug has {trend['look']}. "
         + STYLE_SUFFIX
     )
 
@@ -137,19 +151,23 @@ def log_timings(model_key, slug, timings):
 def main():
     parser = argparse.ArgumentParser(description="Trend Visualizer image-model spike")
     parser.add_argument("--model", required=True, choices=MODELS.keys())
+    parser.add_argument("--trend", choices=[slugify(t["name"]) for t in TRENDS],
+                        help="run a single trend by slug (default: all)")
     parser.add_argument("--num-images", type=int, default=2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dry-run", action="store_true", help="print prompts and cost, no API calls")
     args = parser.parse_args()
 
+    trends = [t for t in TRENDS if args.trend in (None, slugify(t["name"]))]
+
     endpoint, price_per_image, _ = MODELS[args.model]
-    total_images = len(TRENDS) * args.num_images
+    total_images = len(trends) * args.num_images
     print(f"Model: {args.model} ({endpoint})")
-    print(f"Images: {len(TRENDS)} trends x {args.num_images} = {total_images}, "
+    print(f"Images: {len(trends)} trends x {args.num_images} = {total_images}, "
           f"estimated cost ~${total_images * price_per_image:.2f}")
 
     if args.dry_run:
-        for trend in TRENDS:
+        for trend in trends:
             print(f"\n[{slugify(trend['name'])}]\n{build_prompt(trend)}")
         return 0
 
@@ -161,7 +179,7 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     all_timings, failed = [], []
 
-    for trend in TRENDS:
+    for trend in trends:
         slug = slugify(trend["name"])
         prompt = build_prompt(trend)
         trend_dir = OUTPUT_DIR / slug
@@ -182,7 +200,7 @@ def main():
         print(f"  saved {len(urls)} image(s) to {trend_dir.relative_to(OUTPUT_DIR.parent.parent)}")
 
     print("\nSummary")
-    print(f"  succeeded: {len(TRENDS) - len(failed)}/{len(TRENDS)}")
+    print(f"  succeeded: {len(trends) - len(failed)}/{len(trends)}")
     if all_timings:
         print(f"  mean latency per call: {sum(all_timings) / len(all_timings):.1f}s "
               f"(min {min(all_timings):.1f}s, max {max(all_timings):.1f}s)")
