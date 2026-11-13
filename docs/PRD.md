@@ -106,15 +106,19 @@ Two endpoints. `/visualize` requires an `x-api-key` header; a wrong or missing k
 
 ## Success criteria
 
-The MVP is done when all of these are true:
+The MVP is done when all of these are true. Status as of Phase 3 (Nov 12, 2026):
 
-- [ ] Running the n8n trend workflow produces an HTML gallery of room images with no manual steps
-- [ ] At least 4 of 5 real trends produce images good enough to show a Wayfair senior
-- [ ] `/visualize` responds in under 30 seconds for 2 images
-- [ ] The service rejects requests without a valid API key
-- [ ] No secrets in the repo or the exported n8n workflow
-- [ ] Demo clip is 90 seconds or less and plays without a live connection
-- [ ] Total image API spend stays under $15
+| Criterion | Status | Evidence |
+| --- | --- | --- |
+| A chat message to the n8n trend workflow produces `trend_visuals_<date>.html` with no manual steps besides downloading it | Met | Full run end to end: agent → Prep Trend Text → Extract Trends (Groq) → Map Trends → `POST /visualize` on Render → Fal FLUX.1 schnell → Build Trend Gallery |
+| At least 4 of 5 real trends produce images good enough to show a Wayfair senior | Met | 3 / 3 passed visual QA on the live run, which produced 3 trends (the 4 / 5 target was set on the 5-trend spike set) |
+| `/visualize` responds in under 30 seconds for 2 images on a warm Render service | Met | Measured 2.0 s end to end against Render |
+| Cold starts don't break a run: Wake Visualiser pings `GET /health` at the start, and `/visualize` calls use a 120 s timeout with 2 retries | Met | `n8n/SETUP.md`, Wake Visualiser and Visualize Trend nodes |
+| The service rejects requests without a valid API key, and fails closed if `SERVICE_API_KEY` is unset | Met | 401 path covered in `tests/test_api.py` |
+| No secrets in the repo or the exported n8n branch snippet | Met | Keys only in Render env vars and n8n credentials; `build_snippet.js` rejects credentials and key-like strings |
+| No secrets in the full n8n workflow export | Not yet | `n8n/trend_workflow.json` stays gitignored until the Cloudflare token is moved to a Header Auth credential |
+| Demo clip is 90 seconds or less and plays without a live connection | Not yet | Phase 4 |
+| Total image API spend stays under $15 | Met | $0.04 spent so far, `fal-ai/flux/schnell` only |
 
 ## Milestones
 

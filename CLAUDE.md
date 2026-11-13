@@ -9,14 +9,16 @@ existing HTML trend report. It's a side project for the Wayfair AI Agent Enginee
 a 60–90 second demo clip at the final presentation. Full spec: `docs/PRD.md`.
 
 ## Current phase
-**Phase 2: deploy + n8n integration.** The service runs on Render. Wire it into the n8n trend
-workflow (Prep Trend Text → Extract Trends → Map Trends → `POST /visualize` → Build Trend Gallery).
+**Phase 3: polish.** Phase 2 is done: the full n8n workflow runs end to end from a chat message
+(agent → report → Prep Trend Text → Extract Trends (Groq) → Map Trends → `POST /visualize` on
+Render → Fal FLUX schnell → Build Trend Gallery HTML). README, PRD success criteria and measured
+results are done. Remaining: mentor feedback and other polish.
 No Google Sheets: the n8n instance has no Google credential.
 Node setup: `n8n/SETUP.md`.
 
 - [x] Phase 0: setup + spike
-- [ ] Phase 1: service build
-- [ ] Phase 2: deploy (Render) + n8n integration
+- [x] Phase 1: service build
+- [x] Phase 2: deploy (Render) + n8n integration
 - [ ] Phase 3: polish
 - [ ] Phase 4: freeze + demo
 
@@ -37,9 +39,9 @@ python spike\spike.py                        # Phase 0 spike: CALLS FAL, COSTS M
 ```
 
 ## Repo layout
-- `app/main.py` (in progress, Phase 1): FastAPI app, `/health` and `/visualize` endpoints
-- `app/prompts.py` (in progress, Phase 1): `build_prompt(trend)` → image prompt string
-- `app/generator.py` (in progress, Phase 1): Fal.ai call, returns image URLs
+- `app/main.py`: FastAPI app, `/health` and `/visualize` endpoints
+- `app/prompts.py`: `build_prompt(trend)` → image prompt string
+- `app/generator.py`: Fal.ai call, returns image URLs
 - `spike/`: Phase 0 experiments (`spike/output/` is gitignored)
 - `tests/`: pytest tests, Fal calls always mocked
 - `n8n/`: Code node scripts (`prep_trend_text.js`, `map_trends.js`, `build_gallery.js`), their
