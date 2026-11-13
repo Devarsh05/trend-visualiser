@@ -18,20 +18,20 @@ Built as an extension to the Wayfair AI Agent Engineering externship (Extern).
 
 ```mermaid
 flowchart TD
-    chat[Chat message] --> agent[n8n trend agent<br/>HTML trend report]
-    chat --> wake[Wake Visualiser<br/>GET /health]
-    agent --> prep[Prep Trend Text<br/>Code node]
-    prep --> extract[Extract Trends<br/>Groq llama-3.3-70b<br/>+ structured output parser]
-    extract --> map[Map Trends<br/>Code node, up to 5 trends]
-    map -->|"POST /visualize, x-api-key<br/>one call per trend"| api
-    subgraph render["Render (Docker, free tier)"]
-        api[FastAPI service] --> prompt[Prompt builder]
+    chatTrigger[Chat message] --> trendAgent[n8n trend agent<br/>HTML trend report]
+    chatTrigger --> wakeNode[Wake Visualiser<br/>GET /health]
+    trendAgent --> prepNode[Prep Trend Text<br/>Code node]
+    prepNode --> extractNode[Extract Trends<br/>Groq llama-3.3-70b<br/>+ structured output parser]
+    extractNode --> mapNode[Map Trends<br/>Code node, up to 5 trends]
+    mapNode -->|"POST /visualize, x-api-key<br/>one call per trend"| apiNode
+    subgraph renderHost["Render (Docker, free tier)"]
+        apiNode[FastAPI service] --> promptNode[Prompt builder]
     end
-    prompt --> fal[Fal.ai FLUX.1 schnell]
-    fal -->|image URLs| api
-    api -->|trend, prompt, images| gallery[Build Trend Gallery<br/>Code node]
-    gallery --> html[trend_visuals_date.html]
-    wake -.->|warms the service| api
+    promptNode --> falNode[Fal.ai FLUX.1 schnell]
+    falNode -->|image URLs| apiNode
+    apiNode -->|trend, prompt, images| galleryNode[Build Trend Gallery<br/>Code node]
+    galleryNode --> htmlFile[trend_visuals_date.html]
+    wakeNode -.->|warms the service| apiNode
 ```
 
 A chat message starts the existing n8n trend agent, which writes an HTML trend report. The trend
