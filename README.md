@@ -6,7 +6,7 @@
    Built as an extension to the Wayfair AI Agent Engineering externship (Extern).
 
    ## Stack
-   FastAPI · Docker · Fal.ai · n8n · Render
+   FastAPI · Docker · Fal.ai · n8n · Groq · Render
 
    ## Deployment
    Runs as a Docker web service on Render's free tier. It spins down after 15 minutes idle,

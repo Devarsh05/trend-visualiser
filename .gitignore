@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 spike/output/
 n8n/trend_workflow_original.json
+n8n/trend_workflow.json

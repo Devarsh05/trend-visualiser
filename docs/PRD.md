@@ -51,7 +51,7 @@ The stretch item is cut first if any required project falls behind.
 
 ## Architecture and data flow
 
-n8n orchestrates; a small containerized Python service does the image work.
+n8n orchestrates; a small containerized Python service does the image work. Before the HTTP call, an n8n Basic LLM Chain on Groq (`llama-3.3-70b-versatile`) extracts up to 5 visual trends from the trend report and a Code node maps them to the request body.
 
 ```mermaid
 flowchart LR
@@ -137,7 +137,7 @@ The biggest risk is the extension eating time the required projects need.
 | --- | --- |
 | Extension crowds out Projects 2–5 | 3–4 hr weekly cap; pause the extension any week a required project slips |
 | Image quality is inconsistent | Validate in the spike before building; fixed style suffix in every prompt |
-| Agent output is too messy to map into fields | Add a cleanup step in n8n (Set or Code node) before the HTTP call |
+| Agent output is too messy to map into fields | Groq LLM extraction step with a structured output parser, then a Code node cleanup before the HTTP call |
 | Live demo fails on Zoom | Present a pre-recorded clip, not a live call |
 | API costs or leaked keys | API key auth on the service, `num_images` cap, secrets only in env vars |
 | n8n can't reach the service | Deploy early on Render and test the call from n8n in week 3 |

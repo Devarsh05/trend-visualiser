@@ -13,7 +13,7 @@
         0,
         900
       ],
-      "id": "8645fd9a-cbbc-4e5b-90e6-402d048b801d",
+      "id": "542893a2-c679-4da7-bbc4-b30086444b7d",
       "name": "Wake Visualiser",
       "onError": "continueRegularOutput"
     },
@@ -27,7 +27,7 @@
         9536,
         900
       ],
-      "id": "91d1165d-a3a7-4c6c-9518-bf7d2943dcf5",
+      "id": "4393c806-c92a-497e-9dca-679157676bf8",
       "name": "Prep Trend Text"
     },
     {
@@ -42,22 +42,22 @@
         9760,
         900
       ],
-      "id": "bc1ab601-3872-43d9-8364-d6bd315c92b4",
+      "id": "c5635fc7-08bd-469a-893a-cca754855865",
       "name": "Extract Trends"
     },
     {
       "parameters": {
-        "modelName": "models/gemini-2.5-flash",
+        "model": "llama-3.3-70b-versatile",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
         9744,
         1120
       ],
-      "id": "4457ed41-e198-440d-82ad-578ad244d210",
-      "name": "Google Gemini Chat Model"
+      "id": "0598b682-5d6b-4e6b-bda4-929bfe1b6aef",
+      "name": "Groq Chat Model (Trends)"
     },
     {
       "parameters": {
@@ -70,7 +70,7 @@
         9904,
         1120
       ],
-      "id": "487a45e6-d56e-459e-af75-1e6d9ca32513",
+      "id": "b7280987-0b8b-426b-82c1-176018636cb5",
       "name": "Structured Output Parser"
     },
     {
@@ -83,7 +83,7 @@
         10112,
         900
       ],
-      "id": "16a60fbc-1adf-4399-922b-ffff8817b686",
+      "id": "40fdf7d5-c6b2-4cb1-aa4b-5f27fc666848",
       "name": "Map Trends"
     },
     {
@@ -105,7 +105,7 @@
         10336,
         900
       ],
-      "id": "f3c15d7e-f4aa-4828-bedd-2001b00a1716",
+      "id": "22406dae-4987-453d-9066-fe4130c54658",
       "name": "Visualize Trend",
       "retryOnFail": true,
       "maxTries": 3,
@@ -121,7 +121,7 @@
         10560,
         900
       ],
-      "id": "699e1382-6318-4294-8d10-5e4b5a496071",
+      "id": "ccbab99e-cd5f-4be1-b428-831daaf3505d",
       "name": "Build Trend Gallery"
     }
   ],
@@ -170,7 +170,7 @@
         ]
       ]
     },
-    "Google Gemini Chat Model": {
+    "Groq Chat Model (Trends)": {
       "ai_languageModel": [
         [
           {

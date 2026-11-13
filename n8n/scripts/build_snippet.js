@@ -58,12 +58,12 @@ const nodes = [
     name: "Extract Trends",
   },
   {
-    parameters: { modelName: "models/gemini-2.5-flash", options: {} },
-    type: "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+    parameters: { model: "llama-3.3-70b-versatile", options: {} },
+    type: "@n8n/n8n-nodes-langchain.lmChatGroq",
     typeVersion: 1,
     position: [9744, BELOW + 220],
     id: id(),
-    name: "Google Gemini Chat Model",
+    name: "Groq Chat Model (Trends)",
   },
   {
     parameters: { schemaType: "fromJson", jsonSchemaExample: jsonExample },
@@ -117,7 +117,7 @@ const connections = {
   "Extract Trends": main("Map Trends"),
   "Map Trends": main("Visualize Trend"),
   "Visualize Trend": main("Build Trend Gallery"),
-  "Google Gemini Chat Model": {
+  "Groq Chat Model (Trends)": {
     ai_languageModel: [[{ node: "Extract Trends", type: "ai_languageModel", index: 0 }]],
   },
   "Structured Output Parser": {
@@ -138,7 +138,7 @@ for (const [src, outs] of Object.entries(parsed.connections)) {
 }
 if (/"credentials"\s*:/.test(json)) problems.push("credentials present");
 if (/<[A-Z-]+>/.test(json)) problems.push("placeholder like <MY-APP> left in");
-if (/(AIza[0-9A-Za-z_-]{35}|\bsk-[A-Za-z0-9_-]{20,}|Bearer\s+[A-Za-z0-9._-]{20,}|x-api-key)/i.test(json)) {
+if (/(AIza[0-9A-Za-z_-]{35}|gsk_[A-Za-z0-9]{20,}|\bsk-[A-Za-z0-9_-]{20,}|Bearer\s+[A-Za-z0-9._-]{20,}|x-api-key)/i.test(json)) {
   problems.push("secret-like string present");
 }
 if (problems.length) {

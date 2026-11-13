@@ -10,7 +10,7 @@ When chat message received ──► Input Parser1 ──► … ──► Colle
           │                                                     │
           └──► Wake Visualiser                                  └──► Prep Trend Text ──► Extract Trends ──► Map Trends ──► Visualize Trend ──► Build Trend Gallery
                                                                                             ▲         ▲
-                                                                       Google Gemini Chat Model     Structured Output Parser
+                                                                       Groq Chat Model (Trends)     Structured Output Parser
 ```
 
 **Cost:** each run sends at most 5 trends × 2 images to Fal, about $0.03 (about $0.09 worst case if
@@ -42,7 +42,7 @@ select them on the nodes after pasting.
 | Credential | Type | Settings | Used by |
 | --- | --- | --- | --- |
 | `Trend Visualizer API key` | Header Auth | Name `x-api-key`, Value = your `SERVICE_API_KEY` | Visualize Trend |
-| your Gemini credential | Google Gemini (PaLM) API | your Gemini API key | Google Gemini Chat Model |
+| your Groq credential | Groq API | your Groq API key | Groq Chat Model (Trends) |
 
 No Google Sheets credential is needed: the branch ends in a Code node that builds an HTML file.
 
@@ -57,7 +57,8 @@ No Google Sheets credential is needed: the branch ends in a Code node that build
    - **When chat message received** → **Wake Visualiser**
    - **Collect All Sections** → **Prep Trend Text**
 4. Select credentials:
-   - **Google Gemini Chat Model**: your Gemini credential
+   - **Groq Chat Model (Trends)**: your Groq credential (the one the existing Groq Chat Model
+     nodes use)
    - **Visualize Trend**: Authentication is already `Generic Credential Type` → `Header Auth`;
      select `Trend Visualizer API key`
 5. Save the workflow.
@@ -98,7 +99,7 @@ copies `imageStore`.
 | Input | **Prep Trend Text** |
 | Source for Prompt | `Define below` |
 | Require Specific Output Format | on |
-| Chat Model (sub-node) | **Google Gemini Chat Model**, model `models/gemini-2.5-flash` |
+| Chat Model (sub-node) | **Groq Chat Model (Trends)**, model `llama-3.3-70b-versatile` |
 | Output Parser (sub-node) | **Structured Output Parser** |
 
 **Prompt (Text field, expression mode):**
